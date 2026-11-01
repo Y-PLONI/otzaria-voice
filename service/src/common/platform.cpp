@@ -14,6 +14,9 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#include <fstream>
+#include <sstream>
+#include "json.h"
 #include "util.h"
 #else
 #include <dlfcn.h>
@@ -199,6 +202,18 @@ Path findOnnxRuntime() {
       if (!loc.empty()) dirs.push_back(loc);
     }
     RegCloseKey(h);
+  }
+  // Otzaria records the exe it last ran from; this covers portable, custom and
+  // development installs that have no matching uninstall entry.
+  try {
+    std::ifstream f(otzariaDataRoot() / L"otzaria_capabilities.json", std::ios::binary);
+    std::stringstream text;
+    text << f.rdbuf();
+    const auto caps = json::parse(text.str());
+    const auto& exe = caps["exePath"];
+    if (exe.kind == json::Value::String)
+      dirs.push_back(fromUtf8(exe.str()).parent_path().wstring());
+  } catch (const std::exception&) {
   }
   dirs.push_back(fromUtf8(env("LOCALAPPDATA")).wstring() + L"\\Programs\\Otzaria");
   dirs.push_back(fromUtf8(env("ProgramFiles")).wstring() + L"\\Otzaria");
