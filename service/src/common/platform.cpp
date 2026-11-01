@@ -203,16 +203,20 @@ Path findOnnxRuntime() {
     }
     RegCloseKey(h);
   }
-  // Otzaria records the exe it last ran from; this covers portable, custom and
-  // development installs that have no matching uninstall entry.
+  // Otzaria records the exe it last ran from; this covers development builds
+  // and installs without a matching uninstall entry. A portable Otzaria keeps
+  // this file next to its exe, so it is not seen here.
   try {
     std::ifstream f(otzariaDataRoot() / L"otzaria_capabilities.json", std::ios::binary);
     std::stringstream text;
     text << f.rdbuf();
     const auto caps = json::parse(text.str());
     const auto& exe = caps["exePath"];
-    if (exe.kind == json::Value::String)
-      dirs.push_back(fromUtf8(exe.str()).parent_path().wstring());
+    if (exe.kind == json::Value::String) {
+      // Empty or relative would probe the drive root or the current folder.
+      const Path dir = fromUtf8(exe.str()).parent_path();
+      if (dir.is_absolute()) dirs.push_back(dir.wstring());
+    }
   } catch (const std::exception&) {
   }
   dirs.push_back(fromUtf8(env("LOCALAPPDATA")).wstring() + L"\\Programs\\Otzaria");
